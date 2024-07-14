@@ -1,3 +1,3 @@
 export const HomePgae = () => {
-  return <div>HomePgae</div>;
+  return <div className="text-3xl">Hello world</div>;
 };
