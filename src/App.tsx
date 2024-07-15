@@ -1,10 +1,10 @@
 import { FC } from "react";
-import { HomePgae } from "./pages";
+import { HomePage } from "./pages";
 
 const App: FC = () => {
   return (
     <div>
-      <HomePgae />
+      <HomePage />
     </div>
   );
 };
