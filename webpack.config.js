@@ -1,6 +1,7 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const Dotenv = require("dotenv-webpack");
+const fs = require("fs");
 
 module.exports = {
   entry: "./src/index.tsx",
@@ -41,6 +42,13 @@ module.exports = {
   devServer: {
     static: "./dist",
     port: 3000,
+    server: {
+      type: "https",
+      options: {
+        key: fs.readFileSync(path.resolve(__dirname, "server.key")),
+        cert: fs.readFileSync(path.resolve(__dirname, "server.crt")),
+      },
+    },
   },
   plugins: [
     new HtmlWebpackPlugin({
