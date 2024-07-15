@@ -54,7 +54,7 @@ export const HomePage = () => {
         className="h-dvh"
         mapSetter={(mapInstance) => setMap(mapInstance)}
       >
-        <Search userLocation={userLocation} />
+        <Search userLocation={userLocation} map={map} />
       </MapComponent>
     </div>
   );
