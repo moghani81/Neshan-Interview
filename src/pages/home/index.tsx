@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "@neshan-maps-platform/mapbox-gl/dist/NeshanMapboxGl.css";
 import { MapComponent, MapTypes } from "@neshan-maps-platform/mapbox-gl-react";
 import nmp_mapboxgl from "@neshan-maps-platform/mapbox-gl";
+import Search from "./components/search";
 
 export const HomePage = () => {
   const mapKey = process.env.NESHAN_MAP_API_KEY as string;
@@ -52,7 +53,9 @@ export const HomePage = () => {
         }}
         className="h-dvh"
         mapSetter={(mapInstance) => setMap(mapInstance)}
-      />
+      >
+        <Search userLocation={userLocation} />
+      </MapComponent>
     </div>
   );
 };
