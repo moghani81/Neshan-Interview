@@ -3,6 +3,7 @@ import { Input, Loading } from "../../../../components";
 import { useSearch } from "../../../../services/search/useSearch";
 import { debounce } from "../../../../utility";
 import cn from "classnames";
+import nmp_mapboxgl from "@neshan-maps-platform/mapbox-gl";
 
 type SearchProps = {
   userLocation: [number, number];
@@ -105,6 +106,22 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
           if (ref) {
             ref.scrollIntoView({ behavior: "smooth", block: "center" });
           }
+          const feature = features[0];
+          const coordinates = feature.geometry.coordinates.slice();
+          const { title, region, address } = feature.properties;
+
+          new nmp_mapboxgl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(
+              `
+              <h3>${title}</h3>
+              <p>${region}</p>
+              <p>${address}</p>
+            `
+            )
+            .addTo(map)
+            .setOffset([0, -25])
+            .addClassName("popup-symbol");
         }
       });
 
