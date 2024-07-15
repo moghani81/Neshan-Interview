@@ -115,7 +115,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
       if (ref) {
         ref.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-      new nmp_mapboxgl.Popup()
+      new nmp_mapboxgl.Popup({ closeOnMove: true })
         .setLngLat(feature.geometry.coordinates.slice())
         .setHTML(`<h3>${title}</h3><p>${region}</p><p>${address}</p>`)
         .addTo(map)
