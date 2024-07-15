@@ -2,6 +2,7 @@ import { FC, useState, useEffect, useRef, ChangeEvent } from "react";
 import { Input, Loading } from "../../../../components";
 import { useSearch } from "../../../../services/search/useSearch";
 import { debounce } from "../../../../utility";
+import cn from "classnames";
 
 type SearchProps = {
   userLocation: [number, number];
@@ -11,6 +12,9 @@ type SearchProps = {
 const Search: FC<SearchProps> = ({ userLocation, map }) => {
   const [searchText, setSearchText] = useState<string>("");
   const [debouncedText, setDebouncedText] = useState<string>("");
+  const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const { data, isLoading } = useSearch({
     lat: userLocation[1].toString(),
@@ -50,14 +54,17 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
       const geojson = {
         type: "FeatureCollection",
         features: data.items.map((item) => ({
-          type: item.type,
+          type: "Feature",
           geometry: {
             type: "Point",
             coordinates: [item.location.x, item.location.y],
           },
           properties: {
             title: item.title,
+            region: item.region,
+            address: item.address,
             icon: item.type,
+            key: `${item.location.x}-${item.location.y}`,
           },
         })),
       };
@@ -73,7 +80,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
         source: "search-results-source",
         layout: {
           "icon-image": ["get", "icon"],
-          "icon-size": 0.7,
+          "icon-size": ["case", ["==", ["get", "key"], selectedKey], 1.0, 0.7],
           "text-field": ["get", "title"],
           "text-size": 12,
           "text-anchor": "top",
@@ -85,8 +92,31 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
           "text-halo-width": 1,
         },
       });
+
+      map.on("click", "search-results-layer", (e: any) => {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ["search-results-layer"],
+        });
+        if (features.length) {
+          setSelectedLocation(features[0].properties);
+          setSelectedKey(features[0].properties.key);
+          const key = features[0].properties.key;
+          const ref = itemRefs.current[key];
+          if (ref) {
+            ref.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }
+      });
+
+      map.on("mouseenter", "search-results-layer", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+
+      map.on("mouseleave", "search-results-layer", () => {
+        map.getCanvas().style.cursor = "";
+      });
     }
-  }, [data, map]);
+  }, [data, map, selectedKey]);
 
   return (
     <div className="fixed right-0 top-0 z-10 w-80 bg-gray-100 max-h-screen overflow-auto">
@@ -102,7 +132,30 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
         {data?.items.map((item) => (
           <div
             key={`${item.location.x}-${item.location.y}`}
-            className="bg-white p-3"
+            ref={(el) =>
+              (itemRefs.current[`${item.location.x}-${item.location.y}`] = el)
+            }
+            className={cn("bg-white p-3 cursor-pointer", {
+              "!bg-slate-200":
+                selectedLocation?.key ===
+                `${item.location.x}-${item.location.y}`,
+            })}
+            onClick={() => {
+              setSelectedLocation({
+                key: `${item.location.x}-${item.location.y}`,
+                ...item,
+              });
+              setSelectedKey(`${item.location.x}-${item.location.y}`);
+              const ref =
+                itemRefs.current[`${item.location.x}-${item.location.y}`];
+              if (ref) {
+                ref.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
+              map.flyTo({
+                center: [item.location.x, item.location.y],
+                zoom: 15,
+              });
+            }}
           >
             <p className="text-xl font-bold">{item.title}</p>
             <p className="text-zinc-500">{item.region}</p>

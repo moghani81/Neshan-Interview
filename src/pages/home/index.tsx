@@ -27,7 +27,7 @@ export const HomePage = () => {
             map.flyTo({
               center: newLocation,
               essential: true,
-              zoom: 14,
+              zoom: 15,
             });
           }
         },
@@ -45,7 +45,7 @@ export const HomePage = () => {
         options={{
           mapType: MapTypes.neshanVectorNight,
           center: userLocation,
-          zoom: 14,
+          zoom: 15,
           minZoom: 2,
           maxZoom: 21,
           poi: true,
