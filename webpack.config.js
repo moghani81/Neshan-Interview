@@ -42,13 +42,6 @@ module.exports = {
   devServer: {
     static: "./dist",
     port: 3000,
-    server: {
-      type: "https",
-      options: {
-        key: fs.readFileSync(path.resolve(__dirname, "server.key")),
-        cert: fs.readFileSync(path.resolve(__dirname, "server.crt")),
-      },
-    },
   },
   plugins: [
     new HtmlWebpackPlugin({

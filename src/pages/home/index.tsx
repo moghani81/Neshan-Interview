@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "@neshan-maps-platform/mapbox-gl/dist/NeshanMapboxGl.css";
 import { MapComponent, MapTypes } from "@neshan-maps-platform/mapbox-gl-react";
 import nmp_mapboxgl from "@neshan-maps-platform/mapbox-gl";
+import Search from "./components/search";
 
 export const HomePage = () => {
   const mapKey = process.env.NESHAN_MAP_API_KEY as string;
@@ -26,7 +27,7 @@ export const HomePage = () => {
             map.flyTo({
               center: newLocation,
               essential: true,
-              zoom: 14,
+              zoom: 15,
             });
           }
         },
@@ -44,7 +45,7 @@ export const HomePage = () => {
         options={{
           mapType: MapTypes.neshanVectorNight,
           center: userLocation,
-          zoom: 14,
+          zoom: 15,
           minZoom: 2,
           maxZoom: 21,
           poi: true,
@@ -52,7 +53,9 @@ export const HomePage = () => {
         }}
         className="h-dvh"
         mapSetter={(mapInstance) => setMap(mapInstance)}
-      />
+      >
+        <Search userLocation={userLocation} map={map} />
+      </MapComponent>
     </div>
   );
 };
