@@ -4,6 +4,8 @@ import { useSearch } from "../../../../services/search/useSearch";
 import { debounce } from "../../../../utility";
 import cn from "classnames";
 import nmp_mapboxgl from "@neshan-maps-platform/mapbox-gl";
+import directionService from "../../../../services/direction/direction.service";
+import polyline from "@mapbox/polyline";
 
 type SearchProps = {
   userLocation: [number, number];
@@ -12,10 +14,12 @@ type SearchProps = {
 
 const Search: FC<SearchProps> = ({ userLocation, map }) => {
   const [searchText, setSearchText] = useState<string>("");
+  const [directionLoading, setDirectionLoading] = useState(false);
   const [debouncedText, setDebouncedText] = useState<string>("");
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const markerRef = useRef<any>(null);
 
   const { data, isLoading } = useSearch({
     lat: userLocation[1].toString(),
@@ -37,24 +41,31 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
   };
 
   const clearMapLayers = () => {
-    if (map.getLayer("search-results-layer")) {
-      map.removeLayer("search-results-layer");
-    }
-    if (map.getSource("search-results-source")) {
-      map.removeSource("search-results-source");
-    }
+    const layers = ["search-results-layer", "direction-layer"];
+    const sources = ["search-results-source", "direction-source"];
+    layers.forEach((layer) => map.getLayer(layer) && map.removeLayer(layer));
+    sources.forEach(
+      (source) => map.getSource(source) && map.removeSource(source)
+    );
+    markerRef.current && markerRef.current.remove();
   };
 
   useEffect(() => {
     if (data && map) {
       clearMapLayers();
       const geojson = createGeoJson(data.items);
-      map.addSource("search-results-source", {
-        type: "geojson",
-        data: geojson,
-      });
-      map.addLayer(createMapLayer(selectedKey));
 
+      if (!map.getSource("search-results-source")) {
+        map.addSource("search-results-source", {
+          type: "geojson",
+          data: geojson,
+        });
+      } else {
+        const source = map.getSource("search-results-source");
+        source && source.setData && source.setData(geojson);
+      }
+
+      map.addLayer(createMapLayer(selectedKey));
       map.on("click", "search-results-layer", handleMapClick);
       map.on("mouseenter", "search-results-layer", () => {
         map.getCanvas().style.cursor = "pointer";
@@ -111,10 +122,10 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
       const { key, title, region, address } = feature.properties;
       setSelectedLocation(feature.properties);
       setSelectedKey(key);
-      const ref = itemRefs.current[key];
-      if (ref) {
-        ref.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      itemRefs.current[key]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
       new nmp_mapboxgl.Popup({ closeOnMove: true })
         .setLngLat(feature.geometry.coordinates.slice())
         .setHTML(`<h3>${title}</h3><p>${region}</p><p>${address}</p>`)
@@ -128,11 +139,67 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
     const key = `${item.location.x}-${item.location.y}`;
     setSelectedLocation({ key, ...item });
     setSelectedKey(key);
-    const ref = itemRefs.current[key];
-    if (ref) {
-      ref.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    itemRefs.current[key]?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
     map.flyTo({ center: [item.location.x, item.location.y], zoom: 15 });
+  };
+
+  const handleGetDirection = async (destination: [number, number]) => {
+    try {
+      setDirectionLoading(true);
+      const origin = userLocation;
+      const data = await directionService.getDirections({
+        origin,
+        destination,
+      });
+      const steps = data.routes[0].legs[0].steps;
+
+      if (steps) {
+        const geojson = {
+          type: "FeatureCollection",
+          features: steps.map((step) => ({
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: polyline
+                .decode(step.polyline)
+                .map(([lat, lng]) => [lng, lat]),
+            },
+          })),
+        };
+        if (!map.getSource("direction-source")) {
+          map.addSource("direction-source", {
+            type: "geojson",
+            data: geojson,
+          });
+        } else {
+          const source = map.getSource("direction-source");
+          source && source.setData && source.setData(geojson);
+        }
+        map.addLayer({
+          id: "direction-layer",
+          type: "line",
+          source: "direction-source",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#3b82f6",
+            "line-width": 5,
+          },
+        });
+        markerRef.current?.remove();
+        markerRef.current = new nmp_mapboxgl.Marker()
+          .setLngLat(destination)
+          .addTo(map);
+      }
+      map.flyTo({ center: destination, essential: true, zoom: 14 });
+    } finally {
+      setDirectionLoading(false);
+    }
   };
 
   return (
@@ -162,9 +229,25 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
             <p className="text-xl font-bold">{item.title}</p>
             <p className="text-zinc-500">{item.region}</p>
             <p className="text-zinc-500">{item.address}</p>
+            <button
+              className="border border-blue-500 text-blue-500 bg-white p-2 rounded-xl mt-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleGetDirection([item.location.x, item.location.y]);
+              }}
+            >
+              مسیریابی
+            </button>
           </div>
         ))}
       </div>
+      {directionLoading && (
+        <div className="fixed top-0 right-0 min-h-dvh z-20 pointer-events-none w-80">
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-200/50 pointer-events-auto w-full h-full">
+            <Loading />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

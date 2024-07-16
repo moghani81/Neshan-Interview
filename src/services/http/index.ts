@@ -8,7 +8,7 @@ class HttpClient {
     const API_KEY = process.env.NESHAN_SERVICES_API_KEY as string;
 
     this.http = axios.create({
-      baseURL: "https://api.neshan.org/v1/",
+      baseURL: "https://api.neshan.org/",
       headers: {
         "Api-Key": API_KEY,
       },

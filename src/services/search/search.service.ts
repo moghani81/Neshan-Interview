@@ -16,7 +16,7 @@ class SearchService {
     searchRequest: SearchRequestType
   ): Promise<SearchResponseType> {
     try {
-      const response = await http.get("/search", {
+      const response = await http.get("/v1/search", {
         params: {
           lat: searchRequest.lat,
           lng: searchRequest.lng,
