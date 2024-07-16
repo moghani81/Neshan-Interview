@@ -19,6 +19,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const markerRef = useRef<any>(null);
 
   const { data, isLoading } = useSearch({
     lat: userLocation[1].toString(),
@@ -45,6 +46,15 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
     }
     if (map.getSource("search-results-source")) {
       map.removeSource("search-results-source");
+    }
+    if (map.getLayer("direction-layer")) {
+      map.removeLayer("direction-layer");
+    }
+    if (map.getSource("direction-source")) {
+      map.removeSource("direction-source");
+    }
+    if (markerRef.current) {
+      markerRef.current.remove();
     }
   };
 
@@ -195,6 +205,12 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
             "line-width": 5,
           },
         });
+        if (markerRef.current) {
+          markerRef.current.remove();
+        }
+        markerRef.current = new nmp_mapboxgl.Marker()
+          .setLngLat(destination)
+          .addTo(map);
       }
       map.flyTo({
         center: destination,
