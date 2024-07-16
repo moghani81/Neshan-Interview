@@ -253,6 +253,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
               className="border border-blue-500 text-blue-500 bg-white p-2 rounded-xl mt-2"
               onClick={(e) => {
                 e.stopPropagation();
+                clearMapLayers();
                 handleGetDirection([item.location.x, item.location.y]);
               }}
             >
