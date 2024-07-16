@@ -13,29 +13,36 @@ export const HomePage = () => {
   });
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const newLocation: [number, number] = [longitude, latitude];
-          setUserLocation(newLocation);
-          localStorage.setItem("userLocation", JSON.stringify(newLocation));
-          if (map) {
-            new nmp_mapboxgl.Marker({ color: "red" })
-              .setLngLat(newLocation)
-              .addTo(map);
-            map.flyTo({
-              center: newLocation,
-              essential: true,
-              zoom: 15,
-            });
-          }
+    if (map) {
+      const geolocateControl = new nmp_mapboxgl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true,
         },
-        (error) => {
-          console.error("Error getting user location:", error);
-        },
-        { enableHighAccuracy: true }
-      );
+        trackUserLocation: true,
+        showUserHeading: true,
+        showUserLocation: true,
+        showAccuracyCircle: true,
+      });
+
+      map.addControl(geolocateControl, "top-left");
+
+      geolocateControl.on("geolocate", (e: any) => {
+        const newLocation: [number, number] = [
+          e.coords.longitude,
+          e.coords.latitude,
+        ];
+        setUserLocation(newLocation);
+        localStorage.setItem("userLocation", JSON.stringify(newLocation));
+        map.flyTo({
+          center: newLocation,
+          essential: true,
+          zoom: 15,
+        });
+      });
+
+      setTimeout(() => {
+        geolocateControl.trigger();
+      }, 1000);
     }
   }, [map]);
 
