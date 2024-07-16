@@ -14,7 +14,7 @@ type SearchProps = {
 
 const Search: FC<SearchProps> = ({ userLocation, map }) => {
   const [searchText, setSearchText] = useState<string>("");
-  const [directionLoadig, setDirectionLoadig] = useState(false);
+  const [directionLoading, setDirectionLoading] = useState(false);
   const [debouncedText, setDebouncedText] = useState<string>("");
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -41,21 +41,13 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
   };
 
   const clearMapLayers = () => {
-    if (map.getLayer("search-results-layer")) {
-      map.removeLayer("search-results-layer");
-    }
-    if (map.getSource("search-results-source")) {
-      map.removeSource("search-results-source");
-    }
-    if (map.getLayer("direction-layer")) {
-      map.removeLayer("direction-layer");
-    }
-    if (map.getSource("direction-source")) {
-      map.removeSource("direction-source");
-    }
-    if (markerRef.current) {
-      markerRef.current.remove();
-    }
+    const layers = ["search-results-layer", "direction-layer"];
+    const sources = ["search-results-source", "direction-source"];
+    layers.forEach((layer) => map.getLayer(layer) && map.removeLayer(layer));
+    sources.forEach(
+      (source) => map.getSource(source) && map.removeSource(source)
+    );
+    markerRef.current && markerRef.current.remove();
   };
 
   useEffect(() => {
@@ -70,13 +62,10 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
         });
       } else {
         const source = map.getSource("search-results-source");
-        if (source && source.setData) {
-          source.setData(geojson);
-        }
+        source && source.setData && source.setData(geojson);
       }
 
       map.addLayer(createMapLayer(selectedKey));
-
       map.on("click", "search-results-layer", handleMapClick);
       map.on("mouseenter", "search-results-layer", () => {
         map.getCanvas().style.cursor = "pointer";
@@ -133,10 +122,10 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
       const { key, title, region, address } = feature.properties;
       setSelectedLocation(feature.properties);
       setSelectedKey(key);
-      const ref = itemRefs.current[key];
-      if (ref) {
-        ref.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      itemRefs.current[key]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
       new nmp_mapboxgl.Popup({ closeOnMove: true })
         .setLngLat(feature.geometry.coordinates.slice())
         .setHTML(`<h3>${title}</h3><p>${region}</p><p>${address}</p>`)
@@ -150,16 +139,16 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
     const key = `${item.location.x}-${item.location.y}`;
     setSelectedLocation({ key, ...item });
     setSelectedKey(key);
-    const ref = itemRefs.current[key];
-    if (ref) {
-      ref.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    itemRefs.current[key]?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
     map.flyTo({ center: [item.location.x, item.location.y], zoom: 15 });
   };
 
   const handleGetDirection = async (destination: [number, number]) => {
     try {
-      setDirectionLoadig(true);
+      setDirectionLoading(true);
       const origin = userLocation;
       const data = await directionService.getDirections({
         origin,
@@ -176,7 +165,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
               type: "LineString",
               coordinates: polyline
                 .decode(step.polyline)
-                .map(([latitude, longitude]) => [longitude, latitude]),
+                .map(([lat, lng]) => [lng, lat]),
             },
           })),
         };
@@ -187,9 +176,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
           });
         } else {
           const source = map.getSource("direction-source");
-          if (source && source.setData) {
-            source.setData(geojson);
-          }
+          source && source.setData && source.setData(geojson);
         }
         map.addLayer({
           id: "direction-layer",
@@ -204,20 +191,14 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
             "line-width": 5,
           },
         });
-        if (markerRef.current) {
-          markerRef.current.remove();
-        }
+        markerRef.current?.remove();
         markerRef.current = new nmp_mapboxgl.Marker()
           .setLngLat(destination)
           .addTo(map);
       }
-      map.flyTo({
-        center: destination,
-        essential: true,
-        zoom: 14,
-      });
+      map.flyTo({ center: destination, essential: true, zoom: 14 });
     } finally {
-      setDirectionLoadig(false);
+      setDirectionLoading(false);
     }
   };
 
@@ -260,8 +241,8 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
           </div>
         ))}
       </div>
-      {directionLoadig && (
-        <div className="fixed top-0 right-0 min-h-dvh z-20 pointer-events-none  w-80">
+      {directionLoading && (
+        <div className="fixed top-0 right-0 min-h-dvh z-20 pointer-events-none w-80">
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-200/50 pointer-events-auto w-full h-full">
             <Loading />
           </div>
