@@ -1,12 +1,15 @@
 import { useEffect, useRef } from "react";
 import nmp_mapboxgl from "@neshan-maps-platform/mapbox-gl";
-import polyline from "@mapbox/polyline";
+
+export interface SelectedLocation extends SearchItemResponseType {
+  key?: string;
+}
 
 export const useMapLayer = (
   map: any,
-  data: any,
+  data: SearchResponseType,
   selectedKey: string | null,
-  setSelectedLocation: (location: any) => void,
+  setSelectedLocation: (location: SelectedLocation | null) => void,
   setSelectedKey: (key: string | null) => void,
   itemRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>
 ) => {
@@ -44,7 +47,7 @@ export const useMapLayer = (
     }
   };
 
-  const createGeoJson = (items: any[]) => ({
+  const createGeoJson = (items: SearchItemResponseType[]) => ({
     type: "FeatureCollection",
     features: items.map((item) => ({
       type: "Feature",

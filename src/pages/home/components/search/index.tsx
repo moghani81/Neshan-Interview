@@ -1,23 +1,28 @@
 import { FC, useState, ChangeEvent, useRef } from "react";
-import { Input, Loading } from "../../../../components";
-import { useSearch } from "../../../../services/search/useSearch";
+import { Input, Loading } from "@components";
+import { useSearch } from "@services/search/useSearch";
 import cn from "classnames";
 import nmp_mapboxgl from "@neshan-maps-platform/mapbox-gl";
-import directionService from "../../../../services/direction/direction.service";
+import directionService from "@services/direction/direction.service";
 import polyline from "@mapbox/polyline";
-import { useDebouncedValue } from "../../../../hooks/useDebouncedValue";
-import { useSearchHistory } from "../../../../hooks/useSearchHistory";
-import { useMapLayer } from "../../../../hooks/useMapLayer";
+import {
+  useDebouncedValue,
+  useSearchHistory,
+  SelectedLocation,
+  useMapLayer,
+} from "@hooks";
+import { MapType } from "../../index";
 
 type SearchProps = {
   userLocation: [number, number];
-  map: any;
+  map: MapType;
 };
 
 const Search: FC<SearchProps> = ({ userLocation, map }) => {
-  const [searchText, setSearchText] = useState<string>("");
+  const [searchText, setSearchText] = useState("");
   const [directionLoading, setDirectionLoading] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [selectedLocation, setSelectedLocation] =
+    useState<SelectedLocation | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -36,11 +41,12 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
     addToHistorySearch,
     deleteAllItemsHistory,
     loadHistorySearch,
+    deleteItemFromHistory,
   } = useSearchHistory();
 
   const { clearMapLayers, markerRef } = useMapLayer(
     map,
-    data,
+    data as SearchResponseType,
     selectedKey,
     setSelectedLocation,
     setSelectedKey,
@@ -53,7 +59,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
     setSearchText(e.target.value);
   };
 
-  const handleItemClick = (item: any) => {
+  const handleItemClick = (item: SearchItemResponseType) => {
     const key = `${item.location.x}-${item.location.y}`;
     setSelectedLocation({ key, ...item });
     setSelectedKey(key);
@@ -61,12 +67,12 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
       behavior: "smooth",
       block: "center",
     });
-    map.flyTo({ center: [item.location.x, item.location.y], zoom: 15 });
+    map?.flyTo({ center: [item.location.x, item.location.y], zoom: 15 });
     markerRef.current?.remove();
     setTimeout(() => {
       markerRef.current = new nmp_mapboxgl.Marker()
         .setLngLat([item.location.x, item.location.y])
-        .addTo(map);
+        .addTo(map as mapboxgl.Map);
     }, 100);
   };
 
@@ -81,7 +87,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
       const steps = data.routes[0].legs[0].steps;
 
       if (steps) {
-        const geojson = {
+        const geojson: GeoJSON.FeatureCollection<GeoJSON.Geometry> = {
           type: "FeatureCollection",
           features: steps.map((step) => ({
             type: "Feature",
@@ -91,18 +97,28 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
                 .decode(step.polyline)
                 .map(([lat, lng]) => [lng, lat]),
             },
+            properties: {
+              summary: data.routes[0].legs[0].summary,
+              distance: data.routes[0].legs[0].distance.text,
+              duration: data.routes[0].legs[0].duration.text,
+            },
           })),
         };
-        if (!map.getSource("direction-source")) {
-          map.addSource("direction-source", {
+        if (!map?.getSource("direction-source")) {
+          map?.addSource("direction-source", {
             type: "geojson",
             data: geojson,
           });
         } else {
           const source = map.getSource("direction-source");
-          source && source.setData && source.setData(geojson);
+          if (source && (source as mapboxgl.GeoJSONSource).setData) {
+            (source as mapboxgl.GeoJSONSource).setData(geojson);
+          }
         }
-        map.addLayer({
+        if (map?.getLayer("direction-layer")) {
+          map.removeLayer("direction-layer");
+        }
+        map?.addLayer({
           id: "direction-layer",
           type: "line",
           source: "direction-source",
@@ -118,9 +134,9 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
         markerRef.current?.remove();
         markerRef.current = new nmp_mapboxgl.Marker()
           .setLngLat(destination)
-          .addTo(map);
+          .addTo(map as mapboxgl.Map);
       }
-      map.flyTo({ center: destination, essential: true, zoom: 15 });
+      map?.flyTo({ center: destination, essential: true, zoom: 15 });
     } finally {
       setDirectionLoading(false);
     }
@@ -140,12 +156,15 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
         />
         {isLoading && <Loading />}
         {showHistory && history.length > 0 && !searchText && (
-          <div className="bg-white p-4 mt-4 shadow sticky top-0 h-dvh">
+          <div className="bg-white p-4 mt-4 shadow sticky top-0 h-[calc(100vh-86px)] overflow-auto">
             <div className="flex justify-between">
               <h3 className="font-bold">تاریخچه </h3>
               <span
                 className="text-xs text-red-500 cursor-pointer"
-                onClick={deleteAllItemsHistory}
+                onClick={() => {
+                  clearMapLayers();
+                  deleteAllItemsHistory();
+                }}
               >
                 حذف همه
               </span>
@@ -162,15 +181,27 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
                   <p className="text-xl font-bold">{item.title}</p>
                   <p className="text-zinc-500">{item.region}</p>
                   <p className="text-zinc-500">{item.address}</p>
-                  <button
-                    className="border border-blue-500 text-blue-500 bg-white p-2 rounded-xl mt-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleGetDirection([item.location.x, item.location.y]);
-                    }}
-                  >
-                    مسیریابی
-                  </button>
+                  <div className="flex items-center gap-4">
+                    <button
+                      className="border border-blue-500 text-blue-500 bg-white p-2 rounded-xl mt-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleGetDirection([item.location.x, item.location.y]);
+                      }}
+                    >
+                      مسیریابی
+                    </button>
+                    <button
+                      className="text-xs text-red-500 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearMapLayers();
+                        deleteItemFromHistory(item);
+                      }}
+                    >
+                      حذف
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
