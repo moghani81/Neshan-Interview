@@ -8,10 +8,11 @@ import polyline from "@mapbox/polyline";
 import { useDebouncedValue } from "../../../../hooks/useDebouncedValue";
 import { useSearchHistory } from "../../../../hooks/useSearchHistory";
 import { SelectedLocation, useMapLayer } from "../../../../hooks/useMapLayer";
+import { MapType } from "../../index";
 
 type SearchProps = {
   userLocation: [number, number];
-  map: any;
+  map: MapType;
 };
 
 const Search: FC<SearchProps> = ({ userLocation, map }) => {
@@ -63,12 +64,12 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
       behavior: "smooth",
       block: "center",
     });
-    map.flyTo({ center: [item.location.x, item.location.y], zoom: 15 });
+    map?.flyTo({ center: [item.location.x, item.location.y], zoom: 15 });
     markerRef.current?.remove();
     setTimeout(() => {
       markerRef.current = new nmp_mapboxgl.Marker()
         .setLngLat([item.location.x, item.location.y])
-        .addTo(map);
+        .addTo(map as mapboxgl.Map);
     }, 100);
   };
 
@@ -83,7 +84,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
       const steps = data.routes[0].legs[0].steps;
 
       if (steps) {
-        const geojson = {
+        const geojson: GeoJSON.FeatureCollection<GeoJSON.Geometry> = {
           type: "FeatureCollection",
           features: steps.map((step) => ({
             type: "Feature",
@@ -93,21 +94,28 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
                 .decode(step.polyline)
                 .map(([lat, lng]) => [lng, lat]),
             },
+            properties: {
+              summary: data.routes[0].legs[0].summary,
+              distance: data.routes[0].legs[0].distance.text,
+              duration: data.routes[0].legs[0].duration.text,
+            },
           })),
         };
-        if (!map.getSource("direction-source")) {
-          map.addSource("direction-source", {
+        if (!map?.getSource("direction-source")) {
+          map?.addSource("direction-source", {
             type: "geojson",
             data: geojson,
           });
         } else {
           const source = map.getSource("direction-source");
-          source && source.setData && source.setData(geojson);
+          if (source && (source as mapboxgl.GeoJSONSource).setData) {
+            (source as mapboxgl.GeoJSONSource).setData(geojson);
+          }
         }
-        if (map.getLayer("direction-layer")) {
+        if (map?.getLayer("direction-layer")) {
           map.removeLayer("direction-layer");
         }
-        map.addLayer({
+        map?.addLayer({
           id: "direction-layer",
           type: "line",
           source: "direction-source",
@@ -123,9 +131,9 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
         markerRef.current?.remove();
         markerRef.current = new nmp_mapboxgl.Marker()
           .setLngLat(destination)
-          .addTo(map);
+          .addTo(map as mapboxgl.Map);
       }
-      map.flyTo({ center: destination, essential: true, zoom: 15 });
+      map?.flyTo({ center: destination, essential: true, zoom: 15 });
     } finally {
       setDirectionLoading(false);
     }
