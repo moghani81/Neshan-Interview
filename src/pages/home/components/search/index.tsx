@@ -7,7 +7,7 @@ import directionService from "../../../../services/direction/direction.service";
 import polyline from "@mapbox/polyline";
 import { useDebouncedValue } from "../../../../hooks/useDebouncedValue";
 import { useSearchHistory } from "../../../../hooks/useSearchHistory";
-import { useMapLayer } from "../../../../hooks/useMapLayer";
+import { SelectedLocation, useMapLayer } from "../../../../hooks/useMapLayer";
 
 type SearchProps = {
   userLocation: [number, number];
@@ -15,9 +15,10 @@ type SearchProps = {
 };
 
 const Search: FC<SearchProps> = ({ userLocation, map }) => {
-  const [searchText, setSearchText] = useState<string>("");
+  const [searchText, setSearchText] = useState("");
   const [directionLoading, setDirectionLoading] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [selectedLocation, setSelectedLocation] =
+    useState<SelectedLocation | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -36,11 +37,12 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
     addToHistorySearch,
     deleteAllItemsHistory,
     loadHistorySearch,
+    deleteItemFromHistory,
   } = useSearchHistory();
 
   const { clearMapLayers, markerRef } = useMapLayer(
     map,
-    data,
+    data as SearchResponseType,
     selectedKey,
     setSelectedLocation,
     setSelectedKey,
@@ -53,7 +55,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
     setSearchText(e.target.value);
   };
 
-  const handleItemClick = (item: any) => {
+  const handleItemClick = (item: SearchItemResponseType) => {
     const key = `${item.location.x}-${item.location.y}`;
     setSelectedLocation({ key, ...item });
     setSelectedKey(key);
@@ -102,6 +104,9 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
           const source = map.getSource("direction-source");
           source && source.setData && source.setData(geojson);
         }
+        if (map.getLayer("direction-layer")) {
+          map.removeLayer("direction-layer");
+        }
         map.addLayer({
           id: "direction-layer",
           type: "line",
@@ -140,7 +145,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
         />
         {isLoading && <Loading />}
         {showHistory && history.length > 0 && !searchText && (
-          <div className="bg-white p-4 mt-4 shadow sticky top-0 h-dvh">
+          <div className="bg-white p-4 mt-4 shadow sticky top-0 h-[calc(100vh-86px)] overflow-auto">
             <div className="flex justify-between">
               <h3 className="font-bold">تاریخچه </h3>
               <span
@@ -162,15 +167,26 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
                   <p className="text-xl font-bold">{item.title}</p>
                   <p className="text-zinc-500">{item.region}</p>
                   <p className="text-zinc-500">{item.address}</p>
-                  <button
-                    className="border border-blue-500 text-blue-500 bg-white p-2 rounded-xl mt-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleGetDirection([item.location.x, item.location.y]);
-                    }}
-                  >
-                    مسیریابی
-                  </button>
+                  <div className="flex items-center gap-4">
+                    <button
+                      className="border border-blue-500 text-blue-500 bg-white p-2 rounded-xl mt-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleGetDirection([item.location.x, item.location.y]);
+                      }}
+                    >
+                      مسیریابی
+                    </button>
+                    <button
+                      className="text-xs text-red-500 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteItemFromHistory(item);
+                      }}
+                    >
+                      حذف
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

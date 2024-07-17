@@ -24,7 +24,7 @@ export const HomePage = () => {
         showAccuracyCircle: true,
       });
 
-      map.addControl(geolocateControl, "top-left");
+      map.addControl(geolocateControl, "bottom-left");
 
       geolocateControl.on("geolocate", (e: any) => {
         const newLocation: [number, number] = [
