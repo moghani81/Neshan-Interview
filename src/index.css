@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Vazirmatn", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.popup-symbol {
+  & .mapboxgl-popup-close-button {
+    @apply hidden;
+  }
+  & .mapboxgl-popup-content {
+    @apply p-3 rounded-xl;
+  }
+  & h3 {
+    @apply text-base font-medium;
+  }
+  & p {
+    @apply text-zinc-500;
+  }
+}
