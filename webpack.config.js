@@ -1,7 +1,6 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const Dotenv = require("dotenv-webpack");
-const fs = require("fs");
 
 module.exports = {
   entry: "./src/index.tsx",
@@ -10,6 +9,11 @@ module.exports = {
     filename: "bundle.js",
   },
   resolve: {
+    alias: {
+      "@components": path.resolve(__dirname, "src/components/index"),
+      "@hooks": path.resolve(__dirname, "src/hooks/index"),
+      "@services": path.resolve(__dirname, "src/services/"),
+    },
     extensions: [".js", ".jsx", ".ts", ".tsx"],
   },
   module: {
