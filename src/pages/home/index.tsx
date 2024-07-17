@@ -13,7 +13,7 @@ export const HomePage = () => {
   });
 
   useEffect(() => {
-    if (map) {
+    map?.on("load", () => {
       const geolocateControl = new nmp_mapboxgl.GeolocateControl({
         positionOptions: {
           enableHighAccuracy: true,
@@ -43,7 +43,7 @@ export const HomePage = () => {
       setTimeout(() => {
         geolocateControl.trigger();
       }, 1000);
-    }
+    });
   }, [map]);
 
   return (
@@ -56,6 +56,7 @@ export const HomePage = () => {
           minZoom: 2,
           maxZoom: 21,
           poi: true,
+          mapTypeControllerOptions: { show: false },
           mapKey,
         }}
         className="h-dvh"
