@@ -158,7 +158,10 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
               <h3 className="font-bold">تاریخچه </h3>
               <span
                 className="text-xs text-red-500 cursor-pointer"
-                onClick={deleteAllItemsHistory}
+                onClick={() => {
+                  clearMapLayers();
+                  deleteAllItemsHistory();
+                }}
               >
                 حذف همه
               </span>
@@ -189,6 +192,7 @@ const Search: FC<SearchProps> = ({ userLocation, map }) => {
                       className="text-xs text-red-500 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation();
+                        clearMapLayers();
                         deleteItemFromHistory(item);
                       }}
                     >
