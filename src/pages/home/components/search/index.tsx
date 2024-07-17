@@ -1,13 +1,16 @@
 import { FC, useState, ChangeEvent, useRef } from "react";
-import { Input, Loading } from "../../../../components";
-import { useSearch } from "../../../../services/search/useSearch";
+import { Input, Loading } from "@components";
+import { useSearch } from "@services/search/useSearch";
 import cn from "classnames";
 import nmp_mapboxgl from "@neshan-maps-platform/mapbox-gl";
-import directionService from "../../../../services/direction/direction.service";
+import directionService from "@services/direction/direction.service";
 import polyline from "@mapbox/polyline";
-import { useDebouncedValue } from "../../../../hooks/useDebouncedValue";
-import { useSearchHistory } from "../../../../hooks/useSearchHistory";
-import { SelectedLocation, useMapLayer } from "../../../../hooks/useMapLayer";
+import {
+  useDebouncedValue,
+  useSearchHistory,
+  SelectedLocation,
+  useMapLayer,
+} from "@hooks";
 import { MapType } from "../../index";
 
 type SearchProps = {
